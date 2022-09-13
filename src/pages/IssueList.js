@@ -10,28 +10,35 @@ import { githubToken } from "../shared/global_variables";
 const IssueList = () => {
   const octokit = new Octokit({ auth: githubToken });
   const repoList = JSON.parse(localStorage.getItem("myRepository"));
-  const [issues, setIssues] = React.useState([]);
+  const [datalist, setDatalist] = React.useState([]);
+  const [page, setPage] = React.useState(1);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-  const getIssue = async (repoName) => {
-    await octokit
-      .request(`GET /repos/${repoName}/issues`, {
-        owner: repoName.split("/")[0],
-        repo: repoName.split("/")[1],
-      })
-      .then((res) => {
-        if (res.data.length) {
-          setIssues([...issues, ...res.data]);
-        }
-      });
+  const getIssue = async (repoList) => {
+    if (isLoading) {
+      setPage(1)
+      const response = [];
+      for (let i = 0; i < repoList.length; i++) {
+        await octokit
+          .request(`GET /repos/${repoList[i]}/issues`, {
+            owner: repoList[i].split("/")[0],
+            repo: repoList[i].split("/")[1],
+            per_page: 1000,
+          })
+          .then((res) => response.push(...res.data));
+      }
+
+      setDatalist(response);
+      setIsLoading(false);
+    }
   };
 
   React.useEffect(() => {
-    getIssue(repoList[0]);
-  }, []);
+    getIssue(repoList);
+  }, [isLoading]);
 
   return (
     <Wrapper>
-      
       <TableLabel>
         <div id="repoName"> 레포지토리명 </div>
         <div id="type"> 타입 </div>
@@ -39,19 +46,29 @@ const IssueList = () => {
         <div id="createdAt"> 생성일 </div>
       </TableLabel>
 
-      {issues.map((item) => (
-        <IssueItem key={item.id} data={item} />
-      ))}
+      {isLoading ? <p id="loading"> 로딩중... </p> : null}
 
+      {datalist.map((item, idx) => (idx < page * 15 ? <IssueItem key={item.id} data={item} /> : null))}
+
+      {datalist.length >= page * 15 ? (
+        <SeeMore onClick={() => setPage(() => page + 1)}>
+          더 보기 {`( ${page} / ${Math.ceil(datalist.length / 15)} )`}{" "}
+        </SeeMore>
+      ) : null}
     </Wrapper>
   );
 };
 
 const Wrapper = styled.div`
   width: 100%;
-  height: 100vh;
   display: flex;
   flex-direction: column;
+
+  #loading {
+    margin: 100px auto;
+    color: #ccc;
+    font-size: 24px;
+  }
 `;
 
 const TableLabel = styled.div`
@@ -83,4 +100,13 @@ const TableLabel = styled.div`
     border: none;
   }
 `;
+
+const SeeMore = styled.button`
+  width: 90%;
+  margin: 20px auto;
+  padding: 10px;
+  border: none;
+  cursor: pointer;
+`;
+
 export default IssueList;

@@ -46,8 +46,7 @@ const Home = () => {
 };
 
 const Wrapper = styled.div`
-  width: 100%;
-  height: 100vh;
+  width: 90%;
   padding: 20px;
   display: flex;
   flex-direction: column;
